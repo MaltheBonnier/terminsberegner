@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terminsberegner</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f8f8;
+      padding: 20px;
+    }
+    .samlet {
+      background-color: rgba(0, 0, 0, 0.05);
+      padding: 1rem;
+      max-width: 650px;
+      margin: auto;
+      border-radius: 10px;
+    }
+    .hI {
+      text-align: center;
+      font-size: 36px;
+      color: #101010;
+      margin-bottom: 1rem;
+    }
+    .form-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+      gap: 0.5rem;
+    }
+    label {
+      font-size: 18px;
+      flex: 0 0 150px;
+    }
+    input[type="date"],
+    input[type="number"] {
+      padding: 0.5rem;
+      font-size: 16px;
+    }
+    .button {
+      background-color: #64b942;
+      border: none;
+      border-radius: 15px;
+      color: white;
+      padding: 16px 32px;
+      font-size: 20px;
+      cursor: pointer;
+      margin: 10px auto;
+      display: block;
+    }
+    .output {
+      font-size: 20px;
+      font-weight: bold;
+      text-align: center;
+      margin-top: 1.5rem;
+    }
+    .result {
+      font-size: 28px;
+      background-color: #e0ffe0;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+      text-align: center;
+      font-weight: bold;
+    }
+    .section {
+      display: none;
+    }
+    .section.active {
+      display: block;
+    }
+    .nav-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    /* Mobilvenlig styling */
+    @media screen and (max-width: 480px) {
+      .form-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      label {
+        flex: none;
+        margin-bottom: 0.5rem;
+      }
+      input[type="date"],
+      input[type="number"] {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .hI {
+        font-size: 28px;
+      }
+      .button {
+        padding: 12px 24px;
+        font-size: 18px;
+      }
+      .result {
+        font-size: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="samlet">
+    <h2 class="hI">Terminsberegner</h2>
+    
+    <!-- Navigationsknapper -->
+    <div class="nav-buttons">
+      <button id="btnLMP" class="button">Sidste menstruation</button>
+      <button id="btnEgg" class="button">Ægløsning</button>
+    </div>
+    
+    <!-- Sektion for beregning ud fra sidste menstruation -->
+    <div id="lmpSection" class="section active">
+      <h3>Beregning ud fra sidste menstruation</h3>
+      <div class="form-row">
+        <label for="lmpDate">Sidste menstruation:</label>
+        <input type="date" id="lmpDate">
+      </div>
+      <div class="form-row">
+        <label for="cycleLength">Cyklus (dage):</label>
+        <input type="number" id="cycleLength" min="20" max="40" value="28">
+      </div>
+      <button id="btnBeregnLMP" class="button">Beregn terminsdato</button>
+      <div id="lmpOutput" class="output"></div>
+      <button id="btnResetLMP" class="button" style="display:none;">Beregn igen</button>
+    </div>
+    
+    <!-- Sektion for beregning ud fra ægløsning/fertilitetsbehandling -->
+    <div id="egglosningSection" class="section">
+      <h3>Beregning ud fra ægløsning/fertilitetsbehandling</h3>
+      <div class="form-row">
+        <label for="eggDate">Ægløsning-/fertilitetsdato:</label>
+        <input type="date" id="eggDate">
+      </div>
+      <button id="btnBeregnEgg" class="button">Beregn terminsdato</button>
+      <div id="eggOutput" class="output"></div>
+      <button id="btnResetEgg" class="button" style="display:none;">Beregn igen</button>
+    </div>
+  </div>
+  
+  <script>
+    // Event listeners for navigationsknapper
+    document.getElementById("btnLMP").addEventListener("click", function(){
+      showSection("lmpSection");
+    });
+    document.getElementById("btnEgg").addEventListener("click", function(){
+      showSection("egglosningSection");
+    });
+    
+    // Event listeners for beregn-knapper
+    document.getElementById("btnBeregnLMP").addEventListener("click", function(){
+      beregnFraLMP();
+    });
+    document.getElementById("btnBeregnEgg").addEventListener("click", function(){
+      beregnFraEgg();
+    });
+    
+    // Event listeners for "Beregn igen"-knapper
+    document.getElementById("btnResetLMP").addEventListener("click", function(){
+      resetLMP();
+    });
+    document.getElementById("btnResetEgg").addEventListener("click", function(){
+      resetEgg();
+    });
+    
+    // Arrays til danske ugedage og måneder
+    const danskeUgedage = ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"];
+    const danskeMaaneder = ["januar", "februar", "marts", "april", "maj", "juni", "juli", "august", "september", "oktober", "november", "december"];
+    
+    // Formaterer en dato til dansk format, fx "tirsdag, den 8. juli 2025"
+    function formatDanskDato(date) {
+      let dagIndex = date.getDay();
+      if (dagIndex === 0) {
+        dagIndex = 6;
+      } else {
+        dagIndex = dagIndex - 1;
+      }
+      const ugedag = danskeUgedage[dagIndex];
+      const dag = date.getDate();
+      const maaned = danskeMaaneder[date.getMonth()];
+      const aar = date.getFullYear();
+      return `${ugedag}, den ${dag}. ${maaned} ${aar}`;
+    }
+    
+    function beregnFraLMP() {
+      const lmpDateInput = document.getElementById('lmpDate').value;
+      const cycleLength = parseInt(document.getElementById('cycleLength').value);
+      if (!lmpDateInput || isNaN(cycleLength)) {
+        alert("Udfyld alle felter korrekt.");
+        return;
+      }
+      const lmpDate = new Date(lmpDateInput);
+      const eggDate = new Date(lmpDate);
+      eggDate.setDate(eggDate.getDate() + (cycleLength - 14));
+      const terminsdato = new Date(eggDate);
+      terminsdato.setDate(terminsdato.getDate() + 266);
+      
+      const nuDato = new Date();
+      const diffDays = Math.floor((nuDato - lmpDate) / (1000 * 60 * 60 * 24));
+      const totalAdjustedDays = diffDays + (28 - cycleLength);
+      const computedWeeks = Math.floor(totalAdjustedDays / 7);
+      const computedRemainder = totalAdjustedDays % 7;
+      
+      const clinicalWeek = computedWeeks + 1;
+      
+      const outputHTML = `<div class="result">
+  Din terminsdato er ${formatDanskDato(terminsdato)}.<br>
+  Du er i dag ${computedWeeks}+${computedRemainder} og gravid i ${clinicalWeek}. uge (med en cyklus på ${cycleLength} dage).
+</div>`;
+      document.getElementById('lmpOutput').innerHTML = outputHTML;
+      document.getElementById("btnResetLMP").style.display = "block";
+    }
+    
+    function beregnFraEgg() {
+      const eggDateInput = document.getElementById('eggDate').value;
+      if (!eggDateInput) {
+        alert("Udfyld ægløsning-/fertilitetsdato.");
+        return;
+      }
+      const eggDate = new Date(eggDateInput);
+      const terminsdato = new Date(eggDate);
+      terminsdato.setDate(terminsdato.getDate() + 266);
+      
+      const startDato = new Date(eggDate);
+      startDato.setDate(startDato.getDate() - 14);
+      const nuDato = new Date();
+      const diffDays = Math.floor((nuDato - startDato) / (1000 * 60 * 60 * 24));
+      const computedWeeks = Math.floor(diffDays / 7);
+      const computedRemainder = diffDays % 7;
+      
+      const clinicalWeek = computedWeeks + 1;
+      
+      const outputHTML = `<div class="result">
+  Din terminsdato er ${formatDanskDato(terminsdato)}.<br>
+  Du er i dag ${computedWeeks}+${computedRemainder} og gravid i ${clinicalWeek}. uge.
+</div>`;
+      document.getElementById('eggOutput').innerHTML = outputHTML;
+      document.getElementById("btnResetEgg").style.display = "block";
+    }
+    
+    function resetLMP() {
+      document.getElementById('lmpDate').value = "";
+      document.getElementById('cycleLength').value = "28";
+      document.getElementById('lmpOutput').innerHTML = "";
+      document.getElementById("btnResetLMP").style.display = "none";
+    }
+    
+    function resetEgg() {
+      document.getElementById('eggDate').value = "";
+      document.getElementById('eggOutput').innerHTML = "";
+      document.getElementById("btnResetEgg").style.display = "none";
+    }
+    
+    function showSection(sectionId) {
+      document.getElementById("lmpSection").classList.remove("active");
+      document.getElementById("egglosningSection").classList.remove("active");
+      document.getElementById(sectionId).classList.add("active");
+    }
+  </script>
+</body>
+</html>
